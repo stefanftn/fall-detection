@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pozadine -->
+    <color name="bg_dark">#0d1117</color>
+    <color name="card_bg">#161b22</color>
+    <color name="divider">#30363d</color>
+
+    <!-- Tekst -->
+    <color name="text_primary">#e6edf3</color>
+    <color name="text_muted">#8b949e</color>
+
+    <!-- Status indikator -->
+    <color name="status_idle">#21262d</color>
+    <color name="status_ok">#1a3a1a</color>      <!-- tamnozelena -->
+    <color name="status_fall">#3a1a1a</color>    <!-- tamnocrvena -->
+
+    <!-- Dugmad -->
+    <color name="btn_start">#238636</color>      <!-- GitHub zelena -->
+    <color name="btn_stop">#da3633</color>       <!-- GitHub crvena -->
+
+    <!-- Spinner -->
+    <color name="spinner_bg">#21262d</color>
+</resources>

@@ -43,7 +43,7 @@ def plot_model_results(results_list, output_dir):
         cm = res['confusion_matrix']
         cm_norm = cm.astype(float) / cm.sum(axis=1, keepdims=True)
 
-        ax.imshow(cm_norm, interpolation='nearest', cmap='Blues', vmin=0, vmax=1)
+        ax.imshow(cm_norm, interpolation='nearest', cmap='Greys', vmin=0, vmax=1)
         ax.set_xticks([0, 1]);
         ax.set_yticks([0, 1])
         ax.set_xticklabels(['ADL (0)', 'Fall (1)'], color=P['muted'], fontsize=8)
@@ -55,7 +55,7 @@ def plot_model_results(results_list, output_dir):
             for c in range(2):
                 v_abs = cm[r, c]
                 v_norm = cm_norm[r, c]
-                color = 'white' if v_norm > 0.5 else P['text']
+                color = P['bg'] if v_norm > 0.5 else P['text']
                 ax.text(c, r, f'{v_abs}\n({v_norm:.1%})',
                         ha='center', va='center',
                         color=color, fontsize=9, fontweight='bold')

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Potrebna dozvola za internet (API pozivi) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Senzori ne zahtevaju runtime dozvolu, samo feature deklaraciju -->
+    <uses-feature android:name="android.hardware.sensor.accelerometer" android:required="true" />
+    <uses-feature android:name="android.hardware.sensor.gyroscope"     android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.FallDetection"
+        android:usesCleartextTraffic="true">
+
+        <!-- usesCleartextTraffic=true dozvoljava HTTP (ne samo HTTPS) za lokalni razvoj -->
+
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
