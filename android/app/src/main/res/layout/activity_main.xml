@@ -165,7 +165,7 @@
             android:text="START"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary"
+            android:textColor="#FAEBD7"
             android:backgroundTint="@color/btn_start"
             android:layout_marginBottom="16dp" />
 

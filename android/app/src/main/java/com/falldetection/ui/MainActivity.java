@@ -114,8 +114,8 @@ public class MainActivity extends AppCompatActivity
 
     private void setupSpinner() {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, MODEL_LABELS);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                this, R.layout.spinner_item, MODEL_LABELS);
+        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
         spinnerModel.setAdapter(adapter);
 
         spinnerModel.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

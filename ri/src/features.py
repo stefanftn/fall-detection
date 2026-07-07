@@ -192,72 +192,102 @@ def apply_sliding_window(records, impact_threshold=FALL_IMPACT_THRESHOLD_G):
 
 def split_by_subjects(X, y, groups, test_subjects=None, n_splits=5, random_state=42):
     """
-    Deli dataset na train/test skupove tako da isti subjekt ne može biti u oba.
+    Deli dataset na train/validation/test skupove tako da isti subjekt ne može biti u više njih.
 
     Dve strategije:
     A) Eksplicitna lista test subjekata (test_subjects != None):
        Direktno razdvajanje po imenima subjekata — maksimalna kontrola.
        Npr. test_subjects=['SA04', 'SA05', 'SE03'] za leave-out evaluaciju.
+       Validation set se u ovom slučaju ne izdvaja.
 
     B) GroupKFold (test_subjects=None):
-       n_splits foldova; uzima poslednji fold kao test skup.
-       Ekvivalentno Leave-One-Group-Out za mali broj subjekata.
+       Poslednji fold = test skup.
+       Od preostalog dela, predzadnji fold = validation skup.
+       Validation se koristi za grid search (kNN) i EarlyStopping (MLP).
+       Test se koristi samo jednom za finalnu evaluaciju.
 
     Povratne vrednosti:
-        X_train_sc, X_test_sc : np.ndarray — standardizovani setovi
-        y_train, y_test       : np.ndarray — labele
-        groups_train          : np.ndarray — grupe train seta (za CV)
-        scaler                : StandardScaler — fitovan na train setu
-        split_info            : dict — detalji o podeli
+        X_train_sc, X_val_sc, X_test_sc : np.ndarray — standardizovani setovi
+        y_train, y_val, y_test          : np.ndarray — labele
+        groups_train                    : np.ndarray — grupe train seta
+        scaler                          : StandardScaler — fitovan samo na train setu
+        split_info                      : dict — detalji o podeli
     """
     X_vals = X.values if isinstance(X, pd.DataFrame) else X
 
     if test_subjects is not None:
-        # Strategija A: eksplicitna lista
-        test_mask = np.isin(groups, test_subjects)
-        train_mask = ~test_mask
-        train_idx = np.where(train_mask)[0]
-        test_idx = np.where(test_mask)[0]
-        method = f"Eksplicitni test subjekti: {test_subjects}"
+        # Strategija A: eksplicitna lista — nema validation seta
+        test_mask  = np.isin(groups, test_subjects)
+        train_idx  = np.where(~test_mask)[0]
+        test_idx   = np.where(test_mask)[0]
+        val_idx    = np.array([], dtype=int)
+        method     = f"Eksplicitni test subjekti: {test_subjects}"
     else:
-        # Strategija B: GroupKFold — poslednji fold kao test
+        # Strategija B: GroupKFold
+        # Korak 1: izdvoji test skup — poslednji fold
         gkf = GroupKFold(n_splits=n_splits)
         splits = list(gkf.split(X_vals, y, groups))
-        train_idx, test_idx = splits[-1]
-        test_subs = list(set(groups[test_idx]))
-        method = f"GroupKFold (fold {n_splits}/{n_splits}), test subjecti: {sorted(test_subs)}"
+        train_val_idx, test_idx = splits[-1]
+
+        # Korak 2: od train+val dela izdvoji validation — poslednji fold
+        X_tv      = X_vals[train_val_idx]
+        y_tv      = y[train_val_idx]
+        groups_tv = groups[train_val_idx]
+
+        gkf2 = GroupKFold(n_splits=4)
+        splits2 = list(gkf2.split(X_tv, y_tv, groups_tv))
+        train_idx_rel, val_idx_rel = splits2[-1]
+
+        # Pretvori relativne indekse nazad u globalne
+        train_idx = train_val_idx[train_idx_rel]
+        val_idx   = train_val_idx[val_idx_rel]
+
+        val_subs  = sorted(set(groups[val_idx]))
+        test_subs = sorted(set(groups[test_idx]))
+        method    = (f"GroupKFold — train/val/test podela po subjektima  |  "
+                     f"val={val_subs}  test={test_subs}")
 
     X_train_raw = X_vals[train_idx]
-    X_test_raw = X_vals[test_idx]
-    y_train = y[train_idx]
-    y_test = y[test_idx]
+    X_val_raw   = X_vals[val_idx] if len(val_idx) > 0 else np.empty((0, X_vals.shape[1]))
+    X_test_raw  = X_vals[test_idx]
+    y_train     = y[train_idx]
+    y_val       = y[val_idx] if len(val_idx) > 0 else np.array([], dtype=int)
+    y_test      = y[test_idx]
     groups_train = groups[train_idx]
 
-    # Standardizacija: fit samo na train setu, transform na oba
-    scaler = StandardScaler()
+    # Standardizacija: fit SAMO na train setu, transform na svim ostalim
+    scaler     = StandardScaler()
     X_train_sc = scaler.fit_transform(X_train_raw)
-    X_test_sc = scaler.transform(X_test_raw)
+    X_val_sc   = scaler.transform(X_val_raw)   if len(val_idx) > 0 else X_val_raw
+    X_test_sc  = scaler.transform(X_test_raw)
 
     split_info = {
-        'method': method,
-        'train_size': len(y_train),
-        'test_size': len(y_test),
-        'train_adl': int(np.sum(y_train == 0)),
-        'train_fall': int(np.sum(y_train == 1)),
-        'test_adl': int(np.sum(y_test == 0)),
-        'test_fall': int(np.sum(y_test == 1)),
+        'method':        method,
+        'train_size':    len(y_train),
+        'val_size':      len(y_val),
+        'test_size':     len(y_test),
+        'train_adl':     int(np.sum(y_train == 0)),
+        'train_fall':    int(np.sum(y_train == 1)),
+        'val_adl':       int(np.sum(y_val == 0)),
+        'val_fall':      int(np.sum(y_val == 1)),
+        'test_adl':      int(np.sum(y_test == 0)),
+        'test_fall':     int(np.sum(y_test == 1)),
+        'val_subjects':  sorted(set(groups[val_idx])) if len(val_idx) > 0 else [],
         'test_subjects': sorted(set(groups[test_idx])),
     }
 
     print(f"\n  Podela podataka: {method}")
     print(f"  Train: {split_info['train_size']} prozora  "
           f"(ADL={split_info['train_adl']}, Fall={split_info['train_fall']})")
+    print(f"  Val:   {split_info['val_size']} prozora  "
+          f"(ADL={split_info['val_adl']}, Fall={split_info['val_fall']})")
     print(f"  Test:  {split_info['test_size']} prozora  "
           f"(ADL={split_info['test_adl']}, Fall={split_info['test_fall']})")
+    print(f"  Val subjecti:  {split_info['val_subjects']}")
     print(f"  Test subjecti: {split_info['test_subjects']}")
     print(f"  Scaler: StandardScaler (fit samo na train setu)")
 
-    return X_train_sc, X_test_sc, y_train, y_test, groups_train, scaler, split_info
+    return X_train_sc, X_val_sc, X_test_sc, y_train, y_val, y_test, groups_train, scaler, split_info
 
 
 # ─────────────────────────────────────────────────────────────────

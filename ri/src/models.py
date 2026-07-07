@@ -116,7 +116,7 @@ def train_gnb(X_train, y_train, X_test, y_test):
 # MODEL 2: k-NEAREST NEIGHBORS
 # ─────────────────────────────────────────────────────────────────
 
-def train_knn(X_train, y_train, X_test, y_test, k_candidates=None):
+def train_knn(X_train, y_train, X_val, y_val, X_test, y_test, k_candidates=None):
     """
     Grid search kriterijum: maksimalni Recall, uz F1 kao tiebreaker.
     Razlog: u medicinskom sistemu za detekciju pada Recall (Sensitivity) je
@@ -142,9 +142,9 @@ def train_knn(X_train, y_train, X_test, y_test, k_candidates=None):
         tmp = KNeighborsClassifier(n_neighbors=k, weights='distance',
                                    metric='euclidean', n_jobs=-1)
         tmp.fit(X_train, y_train)
-        y_pred = tmp.predict(X_test)
-        rec = float(recall_score(y_test, y_pred, zero_division=0))
-        f1 = float(f1_score(y_test, y_pred, zero_division=0))
+        y_pred = tmp.predict(X_val)
+        rec = float(recall_score(y_val, y_pred, zero_division=0))
+        f1 = float(f1_score(y_val, y_pred, zero_division=0))
         k_search[k] = {'recall': rec, 'f1': f1}
 
         if rec > best_recall or (rec == best_recall and f1 > best_f1):
@@ -216,7 +216,7 @@ def build_mlp(n_features):
     return model
 
 
-def train_mlp(X_train, y_train, X_test, y_test, epochs=100, batch_size=32, mlp_threshold=0.3):
+def train_mlp(X_train, y_train, X_val, y_val, X_test, y_test, epochs=100, batch_size=32, mlp_threshold=0.3):
     """
     Posebnosti treninga:
       class_weight: automatski izračunat iz raspodele train seta
@@ -270,8 +270,7 @@ def train_mlp(X_train, y_train, X_test, y_test, epochs=100, batch_size=32, mlp_t
         X_train, y_train,
         epochs=epochs,
         batch_size=batch_size,
-        validation_split=0.15,
-        class_weight=class_weight,
+        validation_data=(X_val, y_val),
         callbacks=callbacks,
         verbose=0,
     )
